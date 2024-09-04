@@ -1,10 +1,12 @@
 const express = require('express');
 const { ethers } = require('ethers');
 require('dotenv').config();
+const cors = require('cors');
 
 const app = express();
 const port = process.env.PORT || 3001;
 const axios = require('axios');
+app.use(cors()); // Enable CORS for all routes
 
 app.use(express.json());
 
@@ -66,7 +68,7 @@ async function pollForChatGptResponse(contract, chatId, expectedMessageCount, ma
   }
 
 
-  // throw new Error('Timeout waiting for new response');
+  throw new Error('Timeout waiting for new response');
 }
 
 
@@ -209,7 +211,7 @@ app.post('/create-card', async (req, res) => {
     while (attempts < MAX_ATTEMPTS && !imageUrl) {
       try {
         console.log(`Attempt ${attempts + 1}: Generating image with on-chain DALL-E`);
-        const tx = await dalleContract.initializeDalleCall(prompt);
+        const tx = await dalleContract.initializeDalleCall("create an image for video game card game for following" + prompt);
         const receipt = await tx.wait();
         console.log(`Transaction sent, hash: ${receipt.hash}.\nExplorer: https://explorer.galadriel.com/tx/${receipt.hash}`);
         
@@ -222,27 +224,25 @@ app.post('/create-card', async (req, res) => {
       }
     }
 
-    let cardContent;
+    let cardContent = '';
 
-    if (imageUrl) {
-      // If image generation was successful, use on-chain ChatGPT for text
-      try {
-        console.log('Generating card content with on-chain ChatGPT');
-        const tx = await chatGptContract.startChat(`Create a short description for an image with the following prompt: ${prompt}`);
-        const receipt = await tx.wait();
-        console.log(`Transaction sent, hash: ${receipt.hash}.\nExplorer: https://explorer.galadriel.com/tx/${receipt.hash}`);
-        
-        const chatId = ethers.getNumber(receipt.logs.find(log => log.topics[0] === ethers.id("ChatCreated(address,uint256)")).topics[2]);
-        cardContent = await pollForChatGptResponse(chatGptContract, chatId, 2);
-        console.log('Card content generated successfully');
-      } catch (err) {
-        console.error('Error generating card content with on-chain ChatGPT:', err);
-        error = err;
-      }
+    // Generate card content using on-chain ChatGPT
+    try {
+      console.log('Generating card content with on-chain ChatGPT');
+      const tx = await chatGptContract.startChat(`Create a short description for a game card with the following prompt: ${prompt}`);
+      const receipt = await tx.wait();
+      console.log(`Transaction sent, hash: ${receipt.hash}.\nExplorer: https://explorer.galadriel.com/tx/${receipt.hash}`);
+      
+      const chatId = ethers.getNumber(receipt.logs.find(log => log.topics[0] === ethers.id("ChatCreated(address,uint256)")).topics[2]);
+      cardContent = await pollForChatGptResponse(chatGptContract, chatId, 2);
+      console.log('Card content generated successfully');
+    } catch (err) {
+      console.error('Error generating card content with on-chain ChatGPT:', err);
+      error = err;
     }
 
-    // If either image generation or content generation failed, use OpenAI API
-    if ( !cardContent) {
+    // If on-chain generation failed, fall back to OpenAI API
+    if (!cardContent || !imageUrl) {
       console.log('Falling back to OpenAI API for content generation');
       const openaiApiKey = process.env.OPENAI_API_KEY;
       if (!openaiApiKey) {
@@ -251,10 +251,10 @@ app.post('/create-card', async (req, res) => {
 
       const openaiResponse = await axios.post('https://api.openai.com/v1/chat/completions', 
         {
-          model: "gpt-4o-mini",
+          model: "gpt-3.5-turbo",
           messages: [
-            { role: "system", content: "You are a helpful assistant. Respond only with valid JSON." },
-            { role: "user", content: `Create a Game card with a short description and an image URL for the following prompt: ${prompt}. Respond in JSON format with 'description'` }
+            { role: "system", content: "You are a helpful assistant creating game card descriptions." },
+            { role: "user", content: `Create a short description for a game card with the following prompt: ${prompt}` }
           ]
         },
         {
@@ -265,32 +265,13 @@ app.post('/create-card', async (req, res) => {
         }
       );
 
-      const responseContent = openaiResponse.data.choices[0].message.content;
-      console.log('OpenAI API response:', responseContent);
+      cardContent = openaiResponse.data.choices[0].message.content.trim();
+      console.log('OpenAI API response:', cardContent);
 
-      try {
-        // Try to parse the content as JSON
-        const generatedContent = JSON.parse(responseContent);
-        cardContent = generatedContent.description;
-        // imageUrl = imageUrl;
-      } catch (parseError) {
-        console.error('Error parsing OpenAI response:', parseError);
-        
-        // If parsing fails, use regex to extract the information
-        const descriptionMatch = responseContent.match(/"description"\s*:\s*"([^"]*)"/);
-        const imageUrlMatch = responseContent.match(/"imageUrl"\s*:\s*"([^"]*)"/);
-        
-        if (descriptionMatch && imageUrlMatch) {
-          cardContent = descriptionMatch[1];
-          imageUrl = imageUrlMatch[1];
-        } else {
-          throw new Error('Unable to extract description and imageUrl from OpenAI response');
-        }
+      if (!imageUrl) {
+        // If image generation failed, use a placeholder image
+        imageUrl = 'https://via.placeholder.com/300x400?text=Card+Image';
       }
-    }
-
-    if (!cardContent || !imageUrl) {
-      throw new Error('Failed to generate card content or image URL');
     }
 
     res.json({
@@ -303,6 +284,7 @@ app.post('/create-card', async (req, res) => {
     res.status(500).json({ error: 'Failed to create card', details: error.message });
   }
 });
+
 
 app.post('/generate-image', async (req, res) => {
   try {
