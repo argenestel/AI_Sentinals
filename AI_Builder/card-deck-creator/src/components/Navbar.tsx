@@ -1,26 +1,39 @@
-import React from 'react'
-import { Box, Flex, Button } from '@chakra-ui/react'
-import { ConnectButton } from '@rainbow-me/rainbowkit'
+import React from 'react';
+import { Box, Flex, Button, Text } from '@chakra-ui/react';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 const Navbar: React.FC = () => {
   const handleNavigation = (path: string) => {
-    // You can implement custom navigation logic here if needed
-    window.history.pushState({}, '', path)
-  }
+    window.history.pushState({}, '', path);
+  };
 
   return (
-    <Box bg="gray.800" px={4} py={2}>
-      <Flex justifyContent="space-between" alignItems="center">
-        <Flex>
-          <Button
+    <Box 
+      bg="white" 
+      px={4} 
+      py={2} 
+      boxShadow="sm"
+    >
+      <Flex justifyContent="space-between" alignItems="center" maxWidth="1200px" margin="0 auto">
+        <Flex alignItems="center">
+          <Text 
+            fontSize="xl" 
+            fontWeight="bold" 
+            fontFamily="heading" 
+            mr={8}
+            color="brand.500"
+          >
+            Senitals Creator
+          </Text>
+          {/* <Button
             as="a"
             href="/"
             onClick={(e) => {
-              e.preventDefault()
-              handleNavigation('/')
+              e.preventDefault();
+              handleNavigation('/');
             }}
             variant="ghost"
-            color="white"
+            colorScheme="brand"
             mr={2}
           >
             Home
@@ -29,11 +42,11 @@ const Navbar: React.FC = () => {
             as="a"
             href="/create"
             onClick={(e) => {
-              e.preventDefault()
-              handleNavigation('/create')
+              e.preventDefault();
+              handleNavigation('/create');
             }}
             variant="ghost"
-            color="white"
+            colorScheme="brand"
             mr={2}
           >
             Create Card
@@ -42,19 +55,19 @@ const Navbar: React.FC = () => {
             as="a"
             href="/deck"
             onClick={(e) => {
-              e.preventDefault()
-              handleNavigation('/deck')
+              e.preventDefault();
+              handleNavigation('/deck');
             }}
             variant="ghost"
-            color="white"
+            colorScheme="brand"
           >
             My Deck
-          </Button>
+          </Button> */}
         </Flex>
         <ConnectButton />
       </Flex>
     </Box>
-  )
-}
+  );
+};
 
-export default Navbar
+export default Navbar;

@@ -13,11 +13,7 @@ import {
 } from '@rainbow-me/rainbowkit';
 import { WagmiProvider } from 'wagmi';
 import {
-  mainnet,
-  polygon,
-  optimism,
-  arbitrum,
-  base,
+
   Chain,
 } from 'wagmi/chains';
 import {
@@ -25,6 +21,7 @@ import {
   QueryClient,
 } from "@tanstack/react-query";
 import customTheme from './customtheme';
+import CardGame from './components/CardGame';
 
 
 
@@ -46,9 +43,9 @@ const galadriel = {
 } as const satisfies Chain
 
 
-const config = getDefaultConfig({
+export const config = getDefaultConfig({
   appName: 'My RainbowKit App',
-  projectId: 'YOUR_PROJECT_ID',
+  projectId: 'f25128b8bcfc64fb5c124705aa9442b8',
   chains: [galadriel],
   ssr: true, // If your dApp uses server side rendering (SSR)
 });
@@ -64,13 +61,10 @@ const App: React.FC = () => {
 
     <Box>
       <Navbar />
-<Router>
-  <Routes>
-      <Route path="/" element={<Home />} />
-        <Route path="/create" element={<CreateCard />} />
-        <Route path="/deck" element={<Deck />} />
-        </Routes>
-        </Router>
+      <div>
+
+      <CardGame />
+      </div>
 
     </Box>
     </ChakraProvider>

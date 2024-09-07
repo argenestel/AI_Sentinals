@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Box, VStack, Input, Button, Image, Text, useToast, Heading, Flex, Spinner } from '@chakra-ui/react';
 import axios from 'axios';
+import {abi} from '../abi';
+import { useAccount, useWriteContract } from 'wagmi';
 
 const CreateCard: React.FC = () => {
   const [prompt, setPrompt] = useState('');
@@ -9,6 +11,9 @@ const CreateCard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isMinting, setIsMinting] = useState(false);
   const toast = useToast();
+  const { writeContract } = useWriteContract()
+const CONTRACT_ADDRESS = "0xbcE374e9F031e38d603Bc048294BD5a65626643e";
+const { address } = useAccount();
 
   const handleCreateCard = async () => {
     setIsLoading(true);
@@ -38,16 +43,53 @@ const CreateCard: React.FC = () => {
 
   const handleMintCard = async () => {
     setIsMinting(true);
-    // Implement minting logic here
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulating minting process
-    toast({
-      title: 'Card Minted',
-      description: 'Your card has been successfully minted!',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
-    setIsMinting(false);
+    try {
+      // Generate a random tokenURI (you might want to use IPFS in a real-world scenario)
+      const tokenURI = `data:application/json;base64,${btoa(JSON.stringify({
+        name: cardContent,
+        description: prompt,
+        image: imageUrl,
+      }))}`;
+
+      // Generate random attributes (you might want to implement your own logic here)
+      const attack = Math.floor(Math.random() * 100);
+      const defence = Math.floor(Math.random() * 100);
+      const energy = Math.floor(Math.random() * 100);
+
+       writeContract({
+        abi,
+        address: CONTRACT_ADDRESS as `0x${string}`,
+        functionName: 'mintCard',
+        args: [
+          address!, // recipient
+          tokenURI,
+          BigInt(attack),
+          BigInt(defence),
+          BigInt(energy),
+          imageUrl,
+          prompt, // description
+        ],
+      });
+
+      toast({
+        title: 'Card Minted',
+        description: 'Your card has been successfully minted!',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('Error minting card:', error);
+      toast({
+        title: 'Minting Failed',
+        description: 'There was an error minting your card. Please try again.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsMinting(false);
+    }
   };
 
   return (
