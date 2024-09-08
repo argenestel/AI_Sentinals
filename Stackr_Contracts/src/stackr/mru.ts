@@ -7,6 +7,10 @@ const mru = await MicroRollup({
   config: stackrConfig,
   actionSchemas: [registerPlayerSchema, updatePlayerStateSchema],
   stateMachines: [roguelikeStateMachine],
+  stfSchemaMap: {
+    registerPlayer: registerPlayerSchema,
+    updatePlayerState: updatePlayerStateSchema,
+  },
 });
 
 await mru.init();
