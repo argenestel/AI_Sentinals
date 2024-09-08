@@ -38,16 +38,12 @@ const StackrMRU: React.FC = () => {
     try {
       const info = await getInfo();
       setMruInfo(info);
-      // const wallet = wallets[0];
-      // await wallet.switchChain(11155111);
     } catch (error) {
       console.error("Failed to fetch MRU info:", error);
     }
   }, []);
 
-  const handleRegisterPlayer = useCallback(async (playerId: any) => {
-    const id =playerId;
-    console.log(mruInfo);
+  const handleRegisterPlayer = useCallback(async (id: string) => {
     if (!mruInfo) {
       console.log("MRU Info is null, attempting to fetch...");
       await fetchMruInfo();
@@ -55,11 +51,12 @@ const StackrMRU: React.FC = () => {
         throw new Error('Failed to load MRU info. Please try again.');
       }
     }
+    if (!id) {
+      throw new Error('Please enter a Player ID');
+    }
     setSubmitting(true);
     try {
-      const result = await submit("registerPlayer", {
-        playerId: id
-      });
+      const result = await submit("registerPlayer", { playerId: id });
       console.log('Player registered:', result);
       setPlayerId(id);
       setPlayerState(prevState => ({ ...prevState, playerId: id }));
@@ -71,23 +68,7 @@ const StackrMRU: React.FC = () => {
     }
   }, [mruInfo, submit, fetchMruInfo]);
 
-  useEffect(() => {
-    fetchMruInfo();
-
-    // Expose functions globally
-    window.register = handleRegisterPlayer;
-    window.updatePlayerState = handleUpdatePlayerState;
-    window.getPlayerState = () => playerState;
-
-    return () => {
-      // Clean up global functions
-      delete (window as any).register;
-      delete (window as any).updatePlayerState;
-      delete (window as any).getPlayerState;
-    };
-  }, [fetchMruInfo, handleRegisterPlayer]);
-
-  const handleUpdatePlayerState = async (newState: PlayerState) => {
+  const handleUpdatePlayerState = useCallback(async (newState: PlayerState) => {
     if (!newState.playerId || !mruInfo) {
       throw new Error('Please enter a Player ID and wait for MRU info to load');
     }
@@ -102,15 +83,29 @@ const StackrMRU: React.FC = () => {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [mruInfo, submit]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setPlayerState(prevState => ({
       ...prevState,
       [name]: name === 'deckState' || name === 'inventory' ? value : Number(value)
     }));
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchMruInfo();
+
+    window.register = handleRegisterPlayer;
+    window.updatePlayerState = handleUpdatePlayerState;
+    window.getPlayerState = () => playerState;
+
+    return () => {
+      delete (window as any).register;
+      delete (window as any).updatePlayerState;
+      delete (window as any).getPlayerState;
+    };
+  }, [fetchMruInfo, handleRegisterPlayer, handleUpdatePlayerState, playerState]);
 
   if (!ready || !mruInfo) {
     return <div>Loading...</div>;
@@ -128,7 +123,7 @@ const StackrMRU: React.FC = () => {
         value={playerId}
         onChange={(e) => setPlayerId(e.target.value)}
       />
-      <Button onClick={() => {handleRegisterPlayer(playerId)}} disabled={submitting}>
+      <Button onClick={() => handleRegisterPlayer(playerId)} disabled={submitting}>
         Register Player
       </Button>
       
